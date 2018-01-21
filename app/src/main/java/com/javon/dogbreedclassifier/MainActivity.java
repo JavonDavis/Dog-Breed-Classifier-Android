@@ -108,6 +108,13 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onErrorResponse(VolleyError error) {
                 Log.i(LOG_TAG, error.toString());
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                builder.setTitle("Dpg Breed Classifier")
+                        .setMessage("timeout :(")
+                        .setPositiveButton("OK", null)
+                        .show();
+                classifyButton.setEnabled(true);
+                progressBar.setVisibility(View.INVISIBLE);
             }
         }) {
             @Override
