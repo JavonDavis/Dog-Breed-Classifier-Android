@@ -48,7 +48,6 @@ import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
@@ -64,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
     private Button classifyButton;
 
     private String imageFileName;
-    private String url ="http://138.197.216.215:5000/api/classify";
+    private String url ="http://54.89.252.242:5000/api/classify";
 
     private Bitmap currentBitmap;
     private File photoFile;
@@ -93,9 +92,10 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     JSONObject result = new JSONObject(resultResponse);
                     Log.i(LOG_TAG, "Response: " + result.toString());
+                    JSONObject resultData = result.getJSONObject("result");
                     AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                    builder.setTitle("Dpg Breed Classifier")
-                            .setMessage(result.getString("message"))
+                    builder.setTitle("Classification Result")
+                            .setMessage(resultData.getString("message"))
                             .setPositiveButton("OK", null)
                             .show();
                 } catch (JSONException e) {
@@ -216,7 +216,7 @@ public class MainActivity extends AppCompatActivity {
     public void dispatchGalleryIntent() {
         Intent pickPhoto = new Intent(Intent.ACTION_PICK,
                 android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-        startActivityForResult(pickPhoto , 1);//one can be replaced with any action code
+        startActivityForResult(pickPhoto , 0);//one can be replaced with any action code
     }
 
     @Override
@@ -273,82 +273,63 @@ public class MainActivity extends AppCompatActivity {
         switch(requestCode) {
             case 0:
                 if(resultCode == RESULT_OK){
-                    Uri selectedImage = imageReturnedIntent.getData();
-                    imageView.setImageURI(selectedImage);
+                    mImageUri = imageReturnedIntent.getData();
+                    loadBitmap();
                 }
 
                 break;
             case 1:
-                if(resultCode == RESULT_OK){
+                if(resultCode == RESULT_OK) {
                     this.getContentResolver().notifyChange(mImageUri, null);
-                    Bitmap imageBitmap;
-                    try {
-                        imageBitmap = readBitmap(mImageUri);
-
-                        if (imageBitmap != null) {
-                            InputStream in = getContentResolver().openInputStream(mImageUri);
-                            ExifInterface ei = new ExifInterface(in);
-                            int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION,
-                                    ExifInterface.ORIENTATION_UNDEFINED);
-
-                            Bitmap rotatedBitmap = null;
-                            switch(orientation) {
-
-                                case ExifInterface.ORIENTATION_ROTATE_90:
-                                    rotatedBitmap = rotateImage(imageBitmap, 90);
-                                    break;
-
-                                case ExifInterface.ORIENTATION_ROTATE_180:
-                                    rotatedBitmap = rotateImage(imageBitmap, 180);
-                                    break;
-
-                                case ExifInterface.ORIENTATION_ROTATE_270:
-                                    rotatedBitmap = rotateImage(imageBitmap, 270);
-                                    break;
-
-                                case ExifInterface.ORIENTATION_NORMAL:
-                                default:
-                                    rotatedBitmap = imageBitmap;
-                            }
-                            currentBitmap = rotatedBitmap;
-                            imageView.setImageBitmap(currentBitmap);
-                            classifyButton.setEnabled(true);
-                        }
-                    } catch (Exception e) {
-                        Toast.makeText(this, "Failed to load", Toast.LENGTH_SHORT).show();
-                        Log.d(LOG_TAG, "Failed to load", e);
-                    }
+                    loadBitmap();
                 }
                 break;
         }
-//        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-//            String result = "Error retrieving image";
-//
-//            this.getContentResolver().notifyChange(mImageUri, null);
-//            Bitmap imageBitmap;
-//            try {
-//                imageBitmap = readBitmap(mImageUri);
-//
-//                if (imageBitmap != null) {
-//                    currentBitmap = rotateImage(imageBitmap, 90);
-//                    classifyButton.setEnabled(true);
-//                }
-//            } catch (Exception e) {
-//                Toast.makeText(this, "Failed to load", Toast.LENGTH_SHORT).show();
-//                Log.d(LOG_TAG, "Failed to load", e);
-//            }
-//
-//
-////            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-////            builder.setTitle("Text Detection sample")
-////                    .setMessage(result)
-////                    .setPositiveButton("OK", null)
-////                    .show();
-//
-//        }
+    }
+
+    public void loadBitmap() {
+        Bitmap imageBitmap;
+        try {
+            imageBitmap = readBitmap(mImageUri);
+
+            if (imageBitmap != null) {
+                InputStream in = getContentResolver().openInputStream(mImageUri);
+                ExifInterface ei = new ExifInterface(in);
+                int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION,
+                        ExifInterface.ORIENTATION_UNDEFINED);
+
+                Bitmap rotatedBitmap = null;
+                switch (orientation) {
+
+                    case ExifInterface.ORIENTATION_ROTATE_90:
+                        rotatedBitmap = rotateImage(imageBitmap, 90);
+                        break;
+
+                    case ExifInterface.ORIENTATION_ROTATE_180:
+                        rotatedBitmap = rotateImage(imageBitmap, 180);
+                        break;
+
+                    case ExifInterface.ORIENTATION_ROTATE_270:
+                        rotatedBitmap = rotateImage(imageBitmap, 270);
+                        break;
+
+                    case ExifInterface.ORIENTATION_NORMAL:
+                    default:
+                        rotatedBitmap = imageBitmap;
+                }
+                currentBitmap = rotatedBitmap;
+                imageView.setImageBitmap(currentBitmap);
+                classifyButton.setEnabled(true);
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "Failed to load", Toast.LENGTH_SHORT).show();
+            Log.d(LOG_TAG, "Failed to load", e);
+        }
     }
 
     public void chooseGallery(View view) {
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        imageFileName = "JPEG_" + timeStamp + "_";
         dispatchGalleryIntent();
     }
 }
